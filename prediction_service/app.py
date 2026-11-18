@@ -1,9 +1,10 @@
 import os
+import hmac
 from functools import lru_cache
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 app = FastAPI(title='DentaCare prediction support', version='1.0.0')
@@ -31,7 +32,10 @@ def health():
 
 
 @app.post('/predict')
-def predict(payload: PredictionInput):
+def predict(payload: PredictionInput, x_api_key: str | None = Header(default=None)):
+    expected_key = os.getenv('PREDICTION_SERVICE_API_KEY')
+    if not expected_key or not x_api_key or not hmac.compare_digest(x_api_key, expected_key):
+        raise HTTPException(status_code=401, detail='Unauthorized.')
     model = load_model()
     expected = model['features']
     missing = [feature for feature in expected if feature not in payload.input_data]

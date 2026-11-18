@@ -21,6 +21,7 @@ return [
     'prediction' => [
         'url' => env('PREDICTION_SERVICE_URL', 'http://127.0.0.1:8001'),
         'timeout' => env('PREDICTION_SERVICE_TIMEOUT', 10),
+        'api_key' => env('PREDICTION_SERVICE_API_KEY'),
     ],
 
     'resend' => [

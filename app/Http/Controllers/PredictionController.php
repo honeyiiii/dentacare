@@ -15,9 +15,25 @@ class PredictionController extends Controller
 
     public function store(Request $request, Patient $patient)
     {
-        $data = $request->validate(['input_data'=>['required','array','min:1']]);
+        $data = $request->validate([
+            'input_data' => ['required', 'array', 'min:1', 'max:100'],
+            'input_data.*' => [function ($attribute, $value, $fail) {
+                if ($value !== null && ! is_scalar($value)) {
+                    $fail('Each prediction feature must be a scalar value.');
+                }
+                if (is_string($value) && strlen($value) > 255) {
+                    $fail('Prediction feature values may not exceed 255 characters.');
+                }
+            }],
+        ]);
+        $apiKey = (string) config('services.prediction.api_key');
+        if ($apiKey === '') {
+            report(new \RuntimeException('Prediction service API key is not configured.'));
+            return response()->json(['message' => 'Prediction service is unavailable.'], 503);
+        }
         try {
             $response = Http::timeout((int) config('services.prediction.timeout', 10))
+                ->withHeader('X-API-Key', $apiKey)
                 ->post(rtrim(config('services.prediction.url', 'http://127.0.0.1:8001'), '/').'/predict', ['input_data'=>$data['input_data']]);
         } catch (ConnectionException) {
             return response()->json(['message'=>'Prediction service is unavailable.'], 503);
