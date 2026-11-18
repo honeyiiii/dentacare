@@ -18,6 +18,11 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    'prediction' => [
+        'url' => env('PREDICTION_SERVICE_URL', 'http://127.0.0.1:8001'),
+        'timeout' => env('PREDICTION_SERVICE_TIMEOUT', 10),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

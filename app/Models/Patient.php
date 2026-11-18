@@ -18,4 +18,11 @@ class Patient extends Model
         'address',
         'email',
     ];
+
+    public function medicalHistories() { return $this->hasMany(MedicalHistory::class); }
+    public function dentalHistories() { return $this->hasMany(DentalHistory::class); }
+    public function toothCharts() { return $this->hasMany(ToothChart::class); }
+    public function diagnoses() { return $this->hasMany(Diagnosis::class); }
+    public function treatments() { return $this->hasMany(Treatment::class); }
+    public function predictions() { return $this->hasMany(Prediction::class); }
 }
