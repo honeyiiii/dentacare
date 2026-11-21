@@ -1,8 +1,10 @@
 <?php
+use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\PatientController;
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\StaffController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -30,4 +32,11 @@ Route::middleware(['auth', 'role:receptionist'])->get('/receptionist-test', func
 
 Route::middleware(['auth', 'role:receptionist,dentist,assistant,owner'])->group(function () {
     Route::resource('patients', PatientController::class)->only(['index', 'create', 'store']);
+});
+
+Route::middleware(['auth', 'role:owner'])->prefix('staff')->name('staff.')->group(function () {
+    Route::get('/', [StaffController::class, 'index'])->name('index');
+    Route::post('/', [StaffController::class, 'store'])->name('store');
+    Route::patch('{user}/role', [StaffController::class, 'updateRole'])->name('role');
+    Route::patch('{user}/toggle', [StaffController::class, 'toggleActive'])->name('toggle');
 });
