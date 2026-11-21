@@ -5,6 +5,7 @@ use App\Http\Controllers\PatientController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\ActivityLogController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -40,3 +41,6 @@ Route::middleware(['auth', 'role:owner'])->prefix('staff')->name('staff.')->grou
     Route::patch('{user}/role', [StaffController::class, 'updateRole'])->name('role');
     Route::patch('{user}/toggle', [StaffController::class, 'toggleActive'])->name('toggle');
 });
+
+Route::middleware(['auth', 'role:owner'])->get('audit-logs', [ActivityLogController::class, 'index'])->name('audit.index');
+

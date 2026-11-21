@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -40,7 +41,7 @@ class StaffController extends Controller
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        User::forceCreate([
+        $user = User::forceCreate([
             'name'              => $data['name'],
             'email'             => $data['email'],
             'role'              => $data['role'],
@@ -48,6 +49,8 @@ class StaffController extends Controller
             'email_verified_at' => now(),
             'is_active'         => true,
         ]);
+
+        ActivityLog::record('Staff account created', $user, 'Role: ' . $data['role']);
 
         return redirect()->route('staff.index')
             ->with('success', 'Staff account created.');
@@ -67,8 +70,11 @@ class StaffController extends Controller
             'role' => ['required', Rule::in(self::STAFF_ROLES)],
         ]);
 
+        $old = $user->role;
         $user->role = $data['role'];
         $user->save();
+
+        ActivityLog::record('Staff role changed', $user, $old . ' to ' . $data['role']);
 
         return back()->with('success', 'Role updated.');
     }
@@ -86,6 +92,11 @@ class StaffController extends Controller
         $user->is_active = ! $user->is_active;
         $user->save();
 
-        return back()->with('success', $user->is_active ? 'Account reactivated.' : 'Account deactivated.');
+        ActivityLog::record(
+            $user->is_active ? 'Staff account reactivated' : 'Staff account deactivated',
+            $user
+        );
+
+               return back()->with('success', $user->is_active ? 'Account reactivated.' : 'Account deactivated.');
     }
 }
