@@ -31,7 +31,7 @@
                                 <td>{{ ucfirst($a->status) }}</td>
                                 <td>{{ $a->reminder_sent_at ? 'Sent' : '-' }}</td>
                                 <td class="text-right">
-                                    @if ($a->status === 'scheduled')
+                                    @if ($a->status === 'scheduled' && (in_array(auth()->user()->role, ['owner', 'receptionist'], true) || (auth()->user()->role === 'dentist' && $a->dentist_id === auth()->id())))
                                         <form method="POST" action="{{ route('appointments.cancel', $a) }}">
                                             @csrf @method('PATCH')
                                             <button class="text-red-600 hover:underline" onclick="return confirm('Cancel this appointment?')">Cancel</button>
