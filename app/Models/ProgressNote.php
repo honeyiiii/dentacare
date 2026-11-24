@@ -7,6 +7,7 @@ class ProgressNote extends Model
     use RecordsClinicalAudit;
 
     protected $fillable = ['treatment_id', 'note', 'author_id'];
+    protected function casts(): array { return ['note' => 'encrypted']; }
 
     // treatment() lets the audit trait find the patient for each note
     public function treatment() { return $this->belongsTo(Treatment::class); }

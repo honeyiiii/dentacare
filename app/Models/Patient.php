@@ -25,4 +25,6 @@ class Patient extends Model
     public function diagnoses() { return $this->hasMany(Diagnosis::class); }
     public function treatments() { return $this->hasMany(Treatment::class); }
     public function predictions() { return $this->hasMany(Prediction::class); }
+    public function appointments() { return $this->hasMany(Appointment::class); }
+    public function user() { return $this->belongsTo(User::class); }
 }

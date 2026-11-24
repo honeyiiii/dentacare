@@ -9,16 +9,21 @@ class ProgressNoteController extends Controller
 {
     public function index(Treatment $treatment)
     {
+        $this->authorize('view', $treatment);
+
         return response()->json($treatment->progressNotes()->with('author:id,name')->latest()->paginate(20));
     }
 
     public function show(ProgressNote $progressNote)
     {
+        $this->authorize('view', $progressNote);
+
         return response()->json($progressNote->load('author:id,name'));
     }
 
     public function store(Request $request, Treatment $treatment)
     {
+        $this->authorize('view', $treatment);
         $data = $request->validate(['note' => ['required', 'string', 'max:5000']]);
 
         return response()->json(
@@ -30,7 +35,7 @@ class ProgressNoteController extends Controller
     /** Only the author may edit their own note (the change is also kept in the audit trail). */
     public function update(Request $request, ProgressNote $progressNote)
     {
-        abort_unless($progressNote->author_id === $request->user()->id, 403, 'You can only edit your own progress notes.');
+        $this->authorize('update', $progressNote);
 
         $data = $request->validate(['note' => ['required', 'string', 'max:5000']]);
         $progressNote->update($data);

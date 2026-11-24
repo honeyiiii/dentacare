@@ -35,6 +35,7 @@
                             <th>Date of birth</th>
                             <th>Sex</th>
                             <th>Contact</th>
+                            <th class="text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -45,10 +46,20 @@
                                 <td>{{ $patient->date_of_birth }}</td>
                                 <td>{{ $patient->sex }}</td>
                                 <td>{{ $patient->contact_number }}</td>
+                                <td class="py-2 text-right whitespace-nowrap">
+                                    <a class="text-blue-700 hover:underline" href="{{ route('patients.show', $patient) }}">View</a>
+                                    <a class="ml-3 text-blue-700 hover:underline" href="{{ route('patients.edit', $patient) }}">Edit</a>
+                                    <form method="POST" action="{{ route('patients.destroy', $patient) }}" class="inline ml-3"
+                                          onsubmit="return confirm('Archive this patient record? Its clinical history will be retained.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="text-red-700 hover:underline" type="submit">Archive</button>
+                                    </form>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="py-4 text-gray-500">No patients found.</td>
+                                <td colspan="6" class="py-4 text-gray-500">No patients found.</td>
                             </tr>
                         @endforelse
                     </tbody>

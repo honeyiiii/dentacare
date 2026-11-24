@@ -1,5 +1,8 @@
 <?php
 use App\Http\Controllers\PatientController;
+use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\ClinicalAuditController;
+use App\Http\Controllers\StaffController;
 use App\Http\Controllers\MedicalHistoryController;
 use App\Http\Controllers\DentalHistoryController;
 use App\Http\Controllers\ToothChartController;
@@ -27,16 +30,37 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-Route::middleware(['auth', 'role:dentist'])->get('/dentist-test', function () {
-    return 'Welcome dentist!';
+Route::middleware(['auth', 'verified', 'role:receptionist,dentist,assistant,owner', 'can:viewAny,App\\Models\\Patient'])->group(function () {
+    Route::resource('patients', PatientController::class)->except(['destroy']);
+    Route::delete('patients/{patient}', [PatientController::class, 'destroy'])
+        ->name('patients.destroy');
 });
 
-Route::middleware(['auth', 'role:receptionist'])->get('/receptionist-test', function () {
-    return 'Welcome receptionist!';
+Route::prefix('api/appointments')->middleware(['auth', 'verified', 'role:owner,dentist,assistant,receptionist,patient'])->group(function () {
+    Route::get('/', [AppointmentController::class, 'index'])
+        ->middleware('can:viewAny,App\\Models\\Appointment');
+    Route::get('/{appointment}', [AppointmentController::class, 'show'])
+        ->middleware('can:view,appointment');
+    Route::post('/', [AppointmentController::class, 'store'])
+        ->middleware('can:create,App\\Models\\Appointment');
+    Route::post('/{appointment}/cancel', [AppointmentController::class, 'cancel'])
+        ->middleware('can:cancel,appointment');
 });
 
-Route::middleware(['auth', 'role:receptionist,dentist,assistant,owner'])->group(function () {
-    Route::resource('patients', PatientController::class)->only(['index', 'create', 'store']);
+Route::get('api/audit-logs', [ClinicalAuditController::class, 'index'])
+    ->middleware(['auth', 'verified', 'role:owner'])
+    ->name('audit.index');
+
+Route::prefix('api/me')->middleware(['auth', 'verified', 'role:patient'])->group(function () {
+    Route::get('patient-profile', [PatientController::class, 'myProfile']);
+    Route::patch('patient-profile', [PatientController::class, 'updateMyProfile']);
+});
+
+Route::prefix('api/staff')->middleware(['auth', 'verified', 'role:owner'])->group(function () {
+    Route::get('/', [StaffController::class, 'index']);
+    Route::post('/', [StaffController::class, 'store']);
+    Route::patch('/{user}/role', [StaffController::class, 'updateRole']);
+    Route::patch('/{user}/toggle-active', [StaffController::class, 'toggleActive']);
 });
 
 

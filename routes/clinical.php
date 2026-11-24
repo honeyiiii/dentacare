@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 // Task 1 (UC-SH-08): receptionist, dental assistant, dentist and clinic owner.
 // Only the dentist can flag alerts (enforced in MedicalHistoryController).
-Route::middleware(['auth', 'role:owner,dentist,assistant,receptionist'])->prefix('api/patients/{patient}')->group(function () {
+Route::middleware(['auth', 'verified', 'role:owner,dentist,assistant,receptionist', 'can:view,patient'])->prefix('api/patients/{patient}')->group(function () {
     Route::get('medical-alerts', [MedicalHistoryController::class, 'alerts']);
 
     Route::get('medical-history', [MedicalHistoryController::class, 'index']);
@@ -32,8 +32,8 @@ Route::middleware(['auth', 'role:owner,dentist,assistant,receptionist'])->prefix
 });
 
 // Task 2 (UC-SH-09/10/11): dental assistant and dentist. No delete routes: records are preserved.
-Route::middleware(['auth', 'role:dentist,assistant'])->group(function () {
-    Route::prefix('api/patients/{patient}')->group(function () {
+Route::middleware(['auth', 'verified', 'role:dentist,assistant'])->group(function () {
+    Route::middleware('can:view,patient')->prefix('api/patients/{patient}')->group(function () {
         Route::get('tooth-charts', [ToothChartController::class, 'index']);
         Route::get('tooth-charts/{toothChart}', [ToothChartController::class, 'show']);
         Route::post('tooth-charts', [ToothChartController::class, 'store']);
@@ -50,15 +50,21 @@ Route::middleware(['auth', 'role:dentist,assistant'])->group(function () {
         Route::patch('treatments/{treatment}', [TreatmentController::class, 'update']);
     });
 
-    Route::get('api/treatments/{treatment}/progress-notes', [ProgressNoteController::class, 'index']);
-    Route::post('api/treatments/{treatment}/progress-notes', [ProgressNoteController::class, 'store']);
-    Route::get('api/progress-notes/{progressNote}', [ProgressNoteController::class, 'show']);
-    Route::patch('api/progress-notes/{progressNote}', [ProgressNoteController::class, 'update']);
+    Route::get('api/treatments/{treatment}/progress-notes', [ProgressNoteController::class, 'index'])
+        ->middleware('can:view,treatment');
+    Route::post('api/treatments/{treatment}/progress-notes', [ProgressNoteController::class, 'store'])
+        ->middleware('can:view,treatment');
+    Route::get('api/progress-notes/{progressNote}', [ProgressNoteController::class, 'show'])
+        ->middleware('can:view,progressNote');
+    Route::patch('api/progress-notes/{progressNote}', [ProgressNoteController::class, 'update'])
+        ->middleware('can:update,progressNote');
 });
 
 // Task 3 (UC-DN-02, UC-IN-01): licensed dentist only.
-Route::middleware(['auth', 'role:dentist'])->group(function () {
-    Route::get('api/patients/{patient}/predictions', [PredictionController::class, 'index']);
-    Route::post('api/patients/{patient}/predictions', [PredictionController::class, 'store']);
+Route::middleware(['auth', 'verified', 'role:dentist'])->group(function () {
+    Route::middleware('can:view,patient')->group(function () {
+        Route::get('api/patients/{patient}/predictions', [PredictionController::class, 'index']);
+        Route::post('api/patients/{patient}/predictions', [PredictionController::class, 'store']);
+    });
     Route::post('api/predictions/{prediction}/decision', [PredictionController::class, 'decide']);
 });

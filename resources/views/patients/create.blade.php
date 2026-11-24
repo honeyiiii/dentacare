@@ -9,6 +9,19 @@
                 <form method="POST" action="{{ route('patients.store') }}" class="space-y-4">
                     @csrf
 
+                    @if ($accounts->isNotEmpty())
+                        <div>
+                            <x-input-label for="user_id" value="Link patient login (optional)" />
+                            <select id="user_id" name="user_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="">No login account</option>
+                                @foreach ($accounts as $account)
+                                    <option value="{{ $account->id }}" @selected(old('user_id') == $account->id)>{{ $account->name }} — {{ $account->email }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('user_id')" class="mt-1" />
+                        </div>
+                    @endif
+
                     <div>
                         <x-input-label for="full_name" value="Full name" />
                         <x-text-input id="full_name" name="full_name" type="text"

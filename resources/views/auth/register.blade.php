@@ -16,6 +16,34 @@
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
+        <div class="mt-4">
+            <x-input-label for="date_of_birth" value="Date of birth" />
+            <x-text-input id="date_of_birth" class="block mt-1 w-full" type="date" name="date_of_birth" :value="old('date_of_birth')" />
+            <x-input-error :messages="$errors->get('date_of_birth')" class="mt-2" />
+        </div>
+
+        <div class="mt-4">
+            <x-input-label for="sex" value="Sex" />
+            <select id="sex" name="sex" class="block mt-1 w-full border-gray-300 rounded-md shadow-sm">
+                <option value="">Select</option>
+                <option value="Female" @selected(old('sex') === 'Female')>Female</option>
+                <option value="Male" @selected(old('sex') === 'Male')>Male</option>
+            </select>
+            <x-input-error :messages="$errors->get('sex')" class="mt-2" />
+        </div>
+
+        <div class="mt-4">
+            <x-input-label for="contact_number" value="Contact number" />
+            <x-text-input id="contact_number" class="block mt-1 w-full" type="text" name="contact_number" :value="old('contact_number')" />
+            <x-input-error :messages="$errors->get('contact_number')" class="mt-2" />
+        </div>
+
+        <div class="mt-4">
+            <x-input-label for="address" value="Address" />
+            <x-text-input id="address" class="block mt-1 w-full" type="text" name="address" :value="old('address')" />
+            <x-input-error :messages="$errors->get('address')" class="mt-2" />
+        </div>
+
         <!-- Password -->
         <div class="mt-4">
             <x-input-label for="password" :value="__('Password')" />

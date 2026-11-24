@@ -12,9 +12,11 @@ class Prediction extends Model
     {
         return [
             'input_data' => 'encrypted:array',   // patient health data encrypted at rest
-            'risk_scores' => 'array',
+            'risk_scores' => 'encrypted:array',
+            'result' => 'encrypted',
         ];
     }
 
     public function decisions() { return $this->hasMany(PredictionDecision::class); }
+    public function patient() { return $this->belongsTo(Patient::class); }
 }

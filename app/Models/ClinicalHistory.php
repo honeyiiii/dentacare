@@ -14,7 +14,12 @@ class ClinicalHistory extends Model
 
     protected function casts(): array
     {
-        return ['is_alert' => 'boolean', 'flagged_at' => 'datetime'];
+        return [
+            'details' => 'encrypted',
+            'alert_note' => 'encrypted',
+            'is_alert' => 'boolean',
+            'flagged_at' => 'datetime',
+        ];
     }
 
     public function recorder(): BelongsTo { return $this->belongsTo(User::class, 'recorded_by'); }

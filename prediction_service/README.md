@@ -7,7 +7,7 @@ cd prediction_service
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python train.py --data path\to\approved_training_data.csv --label outcome --version 1.0.0
+python train.py --data path\to\approved_training_data.csv --label outcome --version 1.0.0 --test-size 0.2 --seed 42
 $env:MODEL_PATH = 'models/1.0.0.joblib'
 $env:PREDICTION_SERVICE_API_KEY = 'use-the-same-long-random-value-as-Laravel'
 uvicorn app:app --host 127.0.0.1 --port 8001
@@ -15,4 +15,4 @@ uvicorn app:app --host 127.0.0.1 --port 8001
 
 Set the same secret as `PREDICTION_SERVICE_API_KEY` in Laravel's `.env`. Requests to `POST /predict` without that key are rejected. Keep the service bound to localhost unless you also configure transport security and network access controls.
 
-Each CSV column except `--label` becomes a model input, and all such features are required by `POST /predict` as `{"input_data": {"feature": "value"}}`. The response includes class probability scores and model version. Keep training data out of source control. Laravel calls `PREDICTION_SERVICE_URL` (default `http://127.0.0.1:8001`). Every saved result carries the required `supporting information only` label.
+Each CSV column except `--label` and the optional `--group-column` becomes a model input, and all such features are required by `POST /predict` as `{"input_data": {"feature": "value"}}`. Training records accuracy, macro precision/recall/F1, and a confusion matrix in the versioned artifact. Use `--group-column patient_id` when rows can repeat a patient; a group will not be split across training and evaluation. Without it, training uses a stratified row holdout. These are holdout metrics, not proof of clinical validity. The artifact is trained on the training partition; it is not fit on the held-out rows. `GET /model-info` requires the API key and returns the recorded metadata. Keep training data out of source control. Laravel calls `PREDICTION_SERVICE_URL` (default `http://127.0.0.1:8001`). Every saved result carries the required `supporting information only` label.

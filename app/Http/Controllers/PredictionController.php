@@ -8,6 +8,7 @@ use App\Models\PredictionDecision;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 /** Dentist only (see routes/clinical.php). Every prediction is stored with the label "supporting information only". */
@@ -54,6 +55,21 @@ class PredictionController extends Controller
         }
 
         $result = $response->json();
+        $responseValidation = Validator::make(is_array($result) ? $result : [], [
+            'result' => ['required', 'string', 'max:255'],
+            'risk_scores' => ['nullable', 'array'],
+            'risk_scores.*' => ['required', 'numeric', 'between:0,1'],
+            'model_version' => ['nullable', 'string', 'max:100'],
+            'algorithm' => ['nullable', 'string', 'max:100'],
+            'trained_at' => ['nullable', 'date'],
+            'metrics' => ['nullable', 'array'],
+        ]);
+
+        if ($responseValidation->fails()) {
+            report(new \UnexpectedValueException('Prediction service returned an invalid response contract.'));
+
+            return response()->json(['message' => 'Prediction service returned an invalid response.'], 502);
+        }
 
         // Remember which model version produced the result, with its accuracy figures (needed for Task 4).
         $version = isset($result['model_version']) ? ModelVersion::firstOrCreate(
@@ -83,24 +99,28 @@ class PredictionController extends Controller
     /** UC-IN-01: the dentist confirms or overrides. One decision per prediction; it cannot be silently replaced. */
     public function decide(Request $request, Prediction $prediction)
     {
+        $this->authorize('view', $prediction->patient);
+
         $data = $request->validate([
             'decision' => ['required', Rule::in(['confirmed', 'overridden'])],
             'final_condition' => [Rule::requiredIf(fn () => $request->input('decision') === 'overridden'), 'nullable', 'string', 'max:60'],
             'note' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        if ($prediction->decisions()->exists()) {
+        $decision = PredictionDecision::firstOrCreate(
+            ['prediction_id' => $prediction->id],
+            [
+                'dentist_id' => $request->user()->id,
+                'decision' => $data['decision'],
+                // confirmed => the dentist agrees with the model result
+                'final_condition' => $data['decision'] === 'confirmed' ? $prediction->result : $data['final_condition'],
+                'note' => $data['note'] ?? null,
+            ]
+        );
+
+        if (! $decision->wasRecentlyCreated) {
             return response()->json(['message' => 'A decision has already been recorded for this prediction.'], 409);
         }
-
-        $decision = PredictionDecision::create([
-            'prediction_id' => $prediction->id,
-            'dentist_id' => $request->user()->id,
-            'decision' => $data['decision'],
-            // confirmed => the dentist agrees with the model result
-            'final_condition' => $data['decision'] === 'confirmed' ? $prediction->result : $data['final_condition'],
-            'note' => $data['note'] ?? null,
-        ]);
 
         return response()->json($decision, 201);
     }

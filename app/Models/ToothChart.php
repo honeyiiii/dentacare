@@ -12,6 +12,7 @@ class ToothChart extends Model
     ];
 
     protected $fillable = ['patient_id', 'tooth_number', 'condition', 'recorded_by'];
+    protected function casts(): array { return ['condition' => 'encrypted']; }
     public function patient() { return $this->belongsTo(Patient::class); }
     public function recorder() { return $this->belongsTo(User::class, 'recorded_by'); }
 }
