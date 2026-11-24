@@ -1,0 +1,14 @@
+# Uploaded profile photos (keep the folder)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# If merged into a Laravel project
+.env
+/vendor/
+/node_modules/
