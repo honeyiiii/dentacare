@@ -15,6 +15,23 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+
+                    <x-nav-link :href="route('patients.index')" :active="request()->routeIs('patients.*')">
+                        Patients
+                    </x-nav-link>
+
+                    <x-nav-link :href="route('appointments.index')" :active="request()->routeIs('appointments.*')">
+                        Appointments
+                    </x-nav-link>
+
+                    @if (auth()->user()->role === 'owner')
+                        <x-nav-link :href="route('staff.index')" :active="request()->routeIs('staff.*')">
+                            Staff
+                        </x-nav-link>
+                        <x-nav-link :href="route('audit.index')" :active="request()->routeIs('audit.*')">
+                            Audit Logs
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -70,6 +87,23 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('patients.index')" :active="request()->routeIs('patients.*')">
+                Patients
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('appointments.index')" :active="request()->routeIs('appointments.*')">
+                Appointments
+            </x-responsive-nav-link>
+
+            @if (auth()->user()->role === 'owner')
+                <x-responsive-nav-link :href="route('staff.index')" :active="request()->routeIs('staff.*')">
+                    Staff
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('audit.index')" :active="request()->routeIs('audit.*')">
+                    Audit Logs
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->

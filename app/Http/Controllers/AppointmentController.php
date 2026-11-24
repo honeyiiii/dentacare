@@ -2,34 +2,49 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Appointment;
+use App\Models\Patient;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
 {
     public function index(Request $request)
     {
-        $date = $request->query('date', now()->toDateString());
+        $user = $request->user();
 
         $appointments = Appointment::with(['patient', 'dentist'])
-            ->whereDate('appointment_date', $date)
+            ->when($user->role === 'dentist', fn ($q) => $q->where('dentist_id', $user->id))
+            ->orderBy('appointment_date')
             ->orderBy('appointment_time')
-            ->get();
+            ->paginate(10);
 
-        return view('appointments.index', compact('appointments', 'date'));
+        return view('appointments.index', compact('appointments'));
+    }
+
+    public function create()
+    {
+        $patients = Patient::orderBy('full_name')->get();
+        $dentists = User::where('role', 'dentist')->where('is_active', true)->orderBy('name')->get();
+
+        return view('appointments.create', compact('patients', 'dentists'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'patient_id'       => ['required', 'exists:patients,id'],
+            'patient_id'       => ['required', Rule::exists('patients', 'id')],
             'dentist_id'       => ['required', Rule::exists('users', 'id')->where('role', 'dentist')],
             'service'          => ['required', 'string', 'max:255'],
             'appointment_date' => ['required', 'date', 'after_or_equal:today'],
             'appointment_time' => ['required', 'date_format:H:i'],
-            'notes'            => ['nullable', 'string'],
         ]);
+
+        // Store the time as H:i:s so the double-booking check matches exactly
+        $data['appointment_time'] = $data['appointment_time'] . ':00';
 
         $taken = Appointment::where('dentist_id', $data['dentist_id'])
             ->whereDate('appointment_date', $data['appointment_date'])
@@ -38,67 +53,25 @@ class AppointmentController extends Controller
             ->exists();
 
         if ($taken) {
-            return back()->withInput()
-                ->withErrors(['appointment_time' => 'That time slot is already booked for this dentist.']);
+            throw ValidationException::withMessages([
+                'appointment_time' => 'That dentist is already booked at this date and time.',
+            ]);
         }
 
-        Appointment::create($data);
+        $appointment = Appointment::forceCreate($data + ['status' => 'scheduled']);
 
-        return redirect()->route('appointments.index', ['date' => $data['appointment_date']])
-            ->with('success', 'Appointment booked.');
+        ActivityLog::record('Appointment booked', $appointment);
+
+        return redirect()->route('appointments.index')->with('success', 'Appointment booked.');
     }
 
     public function cancel(Appointment $appointment)
     {
-        if (in_array($appointment->status, ['done', 'cancelled'])) {
-            return back()->withErrors(['status' => 'This appointment can no longer be cancelled.']);
-        }
+        $appointment->status = 'cancelled';
+        $appointment->save();
 
-        $appointment->update(['status' => 'cancelled']);
+        ActivityLog::record('Appointment cancelled', $appointment);
 
         return back()->with('success', 'Appointment cancelled.');
-    }
-
-    public function reschedule(Request $request, Appointment $appointment)
-    {
-        if ($appointment->status !== 'scheduled') {
-            return back()->withErrors(['status' => 'Only scheduled appointments can be rescheduled.']);
-        }
-
-        $data = $request->validate([
-            'appointment_date' => ['required', 'date', 'after_or_equal:today'],
-            'appointment_time' => ['required', 'date_format:H:i'],
-        ]);
-
-        $taken = Appointment::where('dentist_id', $appointment->dentist_id)
-            ->whereDate('appointment_date', $data['appointment_date'])
-            ->where('appointment_time', $data['appointment_time'])
-            ->where('status', '!=', 'cancelled')
-            ->where('id', '!=', $appointment->id)
-            ->exists();
-
-        if ($taken) {
-            return back()->withInput()
-                ->withErrors(['appointment_time' => 'That time slot is already booked for this dentist.']);
-        }
-
-        $appointment->update($data);
-
-        return back()->with('success', 'Appointment rescheduled.');
-    }
-
-    public function updateStatus(Request $request, Appointment $appointment)
-    {
-        if ($appointment->status === 'cancelled') {
-            return back()->withErrors(['status' => 'A cancelled appointment cannot change status.']);
-        }
-
-        $data = $request->validate([
-            'status' => ['required', Rule::in(['waiting', 'in_progress', 'done', 'no_show'])],
-        ]);
-
-        $appointment->update($data);
-
-        return back()->with('success', 'Status updated.');
     }
 }

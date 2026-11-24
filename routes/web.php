@@ -1,11 +1,11 @@
 <?php
+
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\PatientController;
-
 use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StaffController;
-use App\Http\Controllers\ActivityLogController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
@@ -23,16 +23,13 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-Route::middleware(['auth', 'role:dentist'])->get('/dentist-test', function () {
-    return 'Welcome dentist!';
-});
-
-Route::middleware(['auth', 'role:receptionist'])->get('/receptionist-test', function () {
-    return 'Welcome receptionist!';
-});
-
 Route::middleware(['auth', 'role:receptionist,dentist,assistant,owner'])->group(function () {
     Route::resource('patients', PatientController::class)->only(['index', 'create', 'store']);
+
+    Route::get('appointments', [AppointmentController::class, 'index'])->name('appointments.index');
+    Route::get('appointments/create', [AppointmentController::class, 'create'])->name('appointments.create');
+    Route::post('appointments', [AppointmentController::class, 'store'])->name('appointments.store');
+    Route::patch('appointments/{appointment}/cancel', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
 });
 
 Route::middleware(['auth', 'role:owner'])->prefix('staff')->name('staff.')->group(function () {
@@ -43,4 +40,3 @@ Route::middleware(['auth', 'role:owner'])->prefix('staff')->name('staff.')->grou
 });
 
 Route::middleware(['auth', 'role:owner'])->get('audit-logs', [ActivityLogController::class, 'index'])->name('audit.index');
-
