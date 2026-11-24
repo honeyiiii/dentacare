@@ -6,7 +6,7 @@ class PredictionDecision extends Model
 {
     use RecordsClinicalAudit;
 
-    protected $fillable = ['prediction_id', 'dentist_id', 'decision', 'note'];
+    protected $fillable = ['prediction_id', 'dentist_id', 'decision', 'final_condition', 'note'];
 
     public function prediction() { return $this->belongsTo(Prediction::class); }
 }
