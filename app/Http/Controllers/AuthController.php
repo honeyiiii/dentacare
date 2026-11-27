@@ -66,7 +66,9 @@ class AuthController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        return view('auth.login');
+        if (! $role) return redirect()->route('welcome.page');
+
+        return view('auth.login', ['role' => $role]);
     }
 
     public function signup(Request $request, ?string $role = null)

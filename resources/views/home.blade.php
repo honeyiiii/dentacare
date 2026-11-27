@@ -3,7 +3,7 @@
 @section('body')
 <header class="hp-nav"><b>DENTACARE</b>
 <nav><a href="#services">Services</a><a href="#how">How it works</a><a href="#dentists">Our dentists</a><a href="#contact">Contact</a></nav>
-<div class="hp-act"><a class="btn g s" href="{{ route('login', 'patient') }}">Sign in</a><a class="btn w s" href="{{ route('signup', 'patient') }}">Create account</a></div></header>
+<div class="hp-act"><a class="btn g s" href="{{ route('login') }}">Sign in</a><a class="btn w s" href="{{ route('signup', 'patient') }}">Create account</a></div></header>
 
 <section class="hp-hero"><div class="hp-wrap"><div>
 <small>FAMILY DENTAL CLINIC</small><h1>Healthy smiles, booked in minutes.</h1>

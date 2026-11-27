@@ -3,7 +3,7 @@
 @section('w', '460px')
 @section('content')
 <b style="font-size:24px">Create a DentaCare account</b>
-<p class="sub">Choose your account type to get started.</p>
+<p class="sub">Create a patient account to book and track your care.</p>
 @include('partials.errors')
 <form method="post" action="{{ route('signup.submit') }}">@csrf
 <input type="hidden" name="account_type" value="patient">
