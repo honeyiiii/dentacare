@@ -5,9 +5,9 @@
 @if ($view)<div class="card" style="max-width:420px"><b>{{ $view['pat'] }}</b><p>{{ $view['svc'] }}<br>{{ $view['dr'] }}<br>{{ $C::fdate($view['date']) }} at {{ $C::ftime($view['time']) }}</p>@if (!empty($view['notes']))<p class="sub">Notes: {{ $view['notes'] }}</p>@endif
 <form method="post" action="{{ route('admin.calendar') }}">@csrf<input type="hidden" name="id" value="{{ $view['id'] }}"><button class="btn" name="act" value="checkin">Check in</button> <button class="btn o" name="act" value="cancel">Cancel booking</button> <a class="btn o" href="{{ route('admin.calendar') }}">Close</a></form></div>@endif
 @if ($sel)<div class="card" style="max-width:420px"><b>Book appointment</b>@include('partials.errors')
-<form method="post" action="{{ route('admin.calendar') }}">@csrf<input type="hidden" name="act" value="book"><label>Patient name</label><input name="pat" value="{{ old('pat') }}">
-<label>Service</label><select name="svc">@foreach ($C::SERVICES as $x)<option>{{ $x }}</option>@endforeach</select>
-<label>Dentist</label><select name="dr">@foreach ($C::DENTISTS as $x)<option>{{ $x }}</option>@endforeach</select>
+<form method="post" action="{{ route('admin.calendar') }}">@csrf<input type="hidden" name="act" value="book"><label>Patient</label><select name="patient_id" required>@foreach ($patients as $patient)<option value="{{ $patient->id }}">{{ $patient->full_name }}</option>@endforeach</select>
+<label>Service</label><select name="service">@foreach ($C::SERVICES as $x)<option>{{ $x }}</option>@endforeach</select>
+<label>Dentist</label><select name="dentist_id" required>@foreach ($dentists as $dentist)<option value="{{ $dentist->id }}">{{ $dentist->name }}</option>@endforeach</select>
 <div class="row"><div><label>Day</label><select name="date">@foreach ($W as $x)<option value="{{ $x }}" @selected($sel['d'] === $x)>{{ date('D j', strtotime($x)) }}</option>@endforeach</select></div>
 <div><label>Time</label><select name="time">@foreach ($C::SLOTS as $x)<option value="{{ $x }}" @selected($sel['t'] === $x)>{{ $C::ftime($x) }}</option>@endforeach</select></div></div><br>
 <button class="btn">Book</button> <a class="btn o" href="{{ route('admin.calendar') }}">Close</a></form></div>@endif

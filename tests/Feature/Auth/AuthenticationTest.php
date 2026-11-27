@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -10,45 +11,31 @@ class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_login_screen_can_be_rendered(): void
+    public function test_login_page_renders_and_patient_login_opens_patient_dashboard(): void
     {
-        $response = $this->get('/login');
+        $user = User::create(['name' => 'Patient', 'email' => 'patient@example.test', 'password' => 'password123', 'role' => 'patient']);
+        Patient::create(['user_id' => $user->id, 'full_name' => 'Patient', 'date_of_birth' => '1990-01-01', 'sex' => 'Female', 'contact_number' => '09123456789', 'address' => 'Address', 'email' => $user->email]);
 
-        $response->assertStatus(200);
+        $this->get(route('login'))->assertOk();
+        $this->post(route('login.submit'), ['email' => $user->email, 'password' => 'password123'])
+            ->assertRedirect(route('patient.dashboard'));
+        $this->assertAuthenticatedAs($user);
     }
 
-    public function test_users_can_authenticate_using_the_login_screen(): void
+    public function test_invalid_credentials_are_rejected(): void
     {
-        $user = User::factory()->create();
+        User::create(['name' => 'Patient', 'email' => 'patient@example.test', 'password' => 'password123', 'role' => 'patient']);
 
-        $response = $this->post('/login', [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
-
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
-    }
-
-    public function test_users_can_not_authenticate_with_invalid_password(): void
-    {
-        $user = User::factory()->create();
-
-        $this->post('/login', [
-            'email' => $user->email,
-            'password' => 'wrong-password',
-        ]);
-
+        $this->post(route('login.submit'), ['email' => 'patient@example.test', 'password' => 'wrong-password'])
+            ->assertSessionHasErrors('email');
         $this->assertGuest();
     }
 
-    public function test_users_can_logout(): void
+    public function test_logout_invalidates_the_session(): void
     {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)->post('/logout');
-
+        $user = User::create(['name' => 'Patient', 'email' => 'patient@example.test', 'password' => 'password123', 'role' => 'patient']);
+        $this->actingAs($user)->withSession(['role' => 'patient'])->post(route('logout'))
+            ->assertRedirect(route('welcome'));
         $this->assertGuest();
-        $response->assertRedirect('/');
     }
 }

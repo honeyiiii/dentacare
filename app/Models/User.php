@@ -7,6 +7,8 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -24,6 +26,8 @@ class User extends Authenticatable
         'password',
         'role',
         'staff_title',
+        'avatar_path',
+        'phone',
     ];
 
     /**
@@ -48,4 +52,8 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function patient(): HasOne { return $this->hasOne(Patient::class); }
+    public function assignedPatients(): HasMany { return $this->hasMany(Patient::class, 'assigned_dentist_id'); }
+    public function dentistAppointments(): HasMany { return $this->hasMany(Appointment::class, 'dentist_id'); }
 }

@@ -13,4 +13,9 @@
 <label>Email</label><input name="email" value="{{ $u['email'] }}"><br><br>
 <button class="btn">Save changes</button></form>
 <form method="post" action="{{ route('logout') }}" style="margin-top:12px">@csrf<button class="btn o" type="submit">Log out</button></form></div>
+<div class="card" style="max-width:520px"><b>Privacy and data requests</b><p class="sub">Request access to, correction of, or deletion of your clinic data.</p>
+<form method="post" action="{{ route('patient.privacy-requests.create') }}">@csrf
+<label>Request type</label><select name="request_type" required><option>Access</option><option>Correction</option><option>Deletion</option></select>
+<label>Details (optional)</label><textarea name="message" rows="3" maxlength="1000"></textarea><br><br><button class="btn">Submit request</button>
+</form></div>
 @endsection
