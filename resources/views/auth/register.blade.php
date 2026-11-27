@@ -1,52 +1,44 @@
 <x-guest-layout>
+    <b style="font-size:24px">Create your account</b>
+    <p class="sub">Book and track your care</p>
+
+    @if ($errors->any())
+        <div class="note" style="background:#fee2e2;color:#991b1b">
+            @foreach ($errors->all() as $e) <div>{{ $e }}</div> @endforeach
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('register') }}">
         @csrf
+        <label>Full name</label>
+        <input name="name" value="{{ old('name') }}" required>
 
-        <!-- Name -->
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
+        <div class="row">
+            <div><label>Date of birth</label><input type="date" name="date_of_birth" value="{{ old('date_of_birth') }}" required></div>
+            <div><label>Sex</label>
+                <select name="sex">
+                    <option @selected(old('sex') === 'Female')>Female</option>
+                    <option @selected(old('sex') === 'Male')>Male</option>
+                </select>
+            </div>
         </div>
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+        <label>Contact number</label>
+        <input name="contact_number" value="{{ old('contact_number') }}" required>
+
+        <label>Address</label>
+        <input name="address" value="{{ old('address') }}" placeholder="House/Unit No., Street, Barangay, City, Province" required>
+
+        <label>Email address</label>
+        <input type="email" name="email" value="{{ old('email') }}" required>
+
+        <div class="row">
+            <div><label>Password</label><input type="password" name="password" required></div>
+            <div><label>Confirm password</label><input type="password" name="password_confirmation" required></div>
         </div>
-
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800" href="{{ route('login') }}">
-                {{ __('Already registered?') }}
-            </a>
-
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
-        </div>
+        <br>
+        <button class="btn f">Create account</button>
     </form>
+
+    <p style="text-align:center" class="sub">Already have an account? <a class="l" href="{{ route('login') }}">Sign in</a></p>
 </x-guest-layout>

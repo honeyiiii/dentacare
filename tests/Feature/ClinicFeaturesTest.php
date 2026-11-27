@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Appointment;
+use App\Models\ActivityLog;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -55,6 +56,18 @@ class ClinicFeaturesTest extends TestCase
             ->assertOk();
     }
 
+    public function test_owner_can_view_audit_logs(): void
+    {
+        $owner = $this->user('owner');
+        ActivityLog::record('Test activity', null, 'Visible audit entry', $owner->id);
+
+        $this->actingAs($owner)
+            ->get('/audit-logs')
+            ->assertOk()
+            ->assertSee('Audit log')
+            ->assertSee('Visible audit entry');
+    }
+
     public function test_double_booking_the_same_dentist_and_time_is_rejected(): void
     {
         $dentist = $this->user('dentist');
@@ -100,6 +113,41 @@ class ClinicFeaturesTest extends TestCase
         ])->assertRedirect(route('appointments.index'));
 
         $this->assertSame(2, Appointment::count());
+    }
+
+    public function test_assistant_cannot_cancel_an_appointment(): void
+    {
+        $dentist = $this->user('dentist');
+        $patient = $this->patient();
+        $appointment = $this->appointment($dentist, $patient);
+
+        $this->actingAs($this->user('assistant'))
+            ->patch(route('appointments.cancel', $appointment))
+            ->assertForbidden();
+
+        $this->assertSame('scheduled', $appointment->fresh()->status);
+    }
+
+    public function test_dentist_can_cancel_only_their_own_appointment(): void
+    {
+        $dentist = $this->user('dentist');
+        $anotherDentist = $this->user('dentist');
+        $patient = $this->patient();
+        $ownAppointment = $this->appointment($dentist, $patient);
+        $otherAppointment = $this->appointment($anotherDentist, $patient, [
+            'appointment_time' => '11:00:00',
+        ]);
+
+        $this->actingAs($dentist)
+            ->patch(route('appointments.cancel', $otherAppointment))
+            ->assertForbidden();
+
+        $this->actingAs($dentist)
+            ->patch(route('appointments.cancel', $ownAppointment))
+            ->assertRedirect();
+
+        $this->assertSame('scheduled', $otherAppointment->fresh()->status);
+        $this->assertSame('cancelled', $ownAppointment->fresh()->status);
     }
 
     public function test_past_dates_are_rejected(): void

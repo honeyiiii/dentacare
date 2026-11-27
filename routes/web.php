@@ -6,14 +6,17 @@ use App\Http\Controllers\PatientController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StaffController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SymptomCheckController;
+
+Route::view('privacy', 'privacy')->middleware('auth')->name('privacy');
 
 Route::get('/', function () {
     return view('home');
 });
-
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -23,9 +26,13 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
+// Staff only: patient records
 Route::middleware(['auth', 'role:receptionist,dentist,assistant,owner'])->group(function () {
     Route::resource('patients', PatientController::class)->only(['index', 'create', 'store']);
+});
 
+// Staff and patients: appointments (the controller limits patients to their own)
+Route::middleware(['auth', 'role:receptionist,dentist,assistant,owner,patient'])->group(function () {
     Route::get('appointments', [AppointmentController::class, 'index'])->name('appointments.index');
     Route::get('appointments/create', [AppointmentController::class, 'create'])->name('appointments.create');
     Route::post('appointments', [AppointmentController::class, 'store'])->name('appointments.store');
@@ -40,3 +47,9 @@ Route::middleware(['auth', 'role:owner'])->prefix('staff')->name('staff.')->grou
 });
 
 Route::middleware(['auth', 'role:owner'])->get('audit-logs', [ActivityLogController::class, 'index'])->name('audit.index');
+Route::middleware(['auth', 'role:owner,receptionist,dentist'])->get('reports', [ReportController::class, 'index'])->name('reports.index');
+
+Route::middleware('auth')->group(function () {
+    Route::get('symptoms', [SymptomCheckController::class, 'index'])->name('symptoms.index');
+    Route::post('symptoms', [SymptomCheckController::class, 'store'])->name('symptoms.store');
+});
