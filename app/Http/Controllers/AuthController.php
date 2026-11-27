@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
+    public function login(Request $request, ?string $role = null)
     {
         if ($request->isMethod('post')) {
             $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
@@ -63,7 +63,7 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-    public function signup(Request $request)
+    public function signup(Request $request, ?string $role = null)
     {
         if ($request->isMethod('post')) {
             $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
@@ -138,7 +138,7 @@ class AuthController extends Controller
         return view('auth.signup');
     }
 
-    public function forgot(Request $request)
+    public function forgot(Request $request, ?string $role = null)
     {
         $step = 1;
         $email = $request->session()->get('reset_email');

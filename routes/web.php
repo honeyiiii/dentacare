@@ -8,12 +8,14 @@ use App\Http\Middleware\EnsureRole;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware([BootClinic::class])->group(function () {
-    Route::view('/', 'welcome')->name('welcome');
+    Route::view('/', 'landing')->name('welcome');
+    Route::view('/home', 'home')->name('home');
+    Route::view('/welcome', 'welcome')->name('welcome.page');
 
     Route::controller(AuthController::class)->group(function () {
-        Route::match(['get', 'post'], '/login', 'login')->name('login');
-        Route::match(['get', 'post'], '/signup', 'signup')->name('signup');
-        Route::match(['get', 'post'], '/forgot', 'forgot')->name('forgot');
+        Route::match(['get', 'post'], '/login/{role?}', 'login')->where(['role' => 'admin|patient'])->name('login');
+        Route::match(['get', 'post'], '/signup/{role?}', 'signup')->where(['role' => 'admin|patient'])->name('signup');
+        Route::match(['get', 'post'], '/forgot/{role?}', 'forgot')->where(['role' => 'admin|patient'])->name('forgot');
         Route::post('/logout', 'logout')->name('logout');
     });
 
