@@ -12,3 +12,8 @@ Thumbs.db
 .env
 /vendor/
 /node_modules/
+
+# Generated runtime artifacts
+/.phpunit.result.cache
+/public/hot
+__pycache__/
