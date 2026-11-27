@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Patient;
 use App\Models\AuditLog;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,8 @@ use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
+    private const STAFF_ROLES = ['admin', 'owner', 'dentist', 'assistant', 'receptionist'];
+
     public function login(Request $request, ?string $role = null)
     {
         if ($request->isMethod('post')) {
@@ -30,23 +33,40 @@ class AuthController extends Controller
             }
 
             $request->session()->regenerate();
-            $user = Auth::user();
 
-            if (! in_array($user->role, ['patient', 'admin'], true)) {
+            /** @var \App\Models\User $user */
+            $user = User::findOrFail(Auth::id());
+
+            $isStaff = in_array($user->role, self::STAFF_ROLES, true);
+            $portal = $role ?? $request->input('portal');
+
+            if (($portal === 'patient' && $isStaff) || ($portal === 'admin' && ! $isStaff)) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                $msg = $portal === 'patient'
+                    ? 'This is a staff account. Please use the Admin sign in.'
+                    : 'This is a patient account. Please use the Patient sign in.';
+                return back()->withErrors(['email' => $msg])->onlyInput('email');
+            }
+
+            if (! in_array($user->role, array_merge(['patient'], self::STAFF_ROLES), true)) {
                 Auth::logout();
                 return back()->withErrors(['email' => 'This account type cannot access the clinic portal.'])->onlyInput('email');
             }
 
             $request->session()->put('role', $user->role);
 
-            if (! $user->hasVerifiedEmail()) return redirect()->route('verification.notice');
+            if (! $user->hasVerifiedEmail()) {
+                return redirect()->route('verification.notice');
+            }
 
             if ($user->role === 'patient') {
                 $patient = Patient::where('user_id', $user->id)->first();
                 $request->session()->put('user', [
                     'name' => $user->name,
                     'email' => $user->email,
-                    'dob' => $patient?->date_of_birth?->format('Y-m-d') ?? '',
+                    'dob' => $patient?->date_of_birth ? Carbon::parse($patient->date_of_birth)->format('Y-m-d') : '',
                     'sex' => $patient?->sex ?? 'Female',
                     'phone' => $patient?->contact_number ?? '',
                     'addr' => $patient?->address ?? '',
@@ -66,22 +86,20 @@ class AuthController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        return view('auth.login');
+        if (! $role) return redirect()->route('welcome.page');
+
+        return view('auth.login', ['role' => $role]);
     }
 
     public function signup(Request $request, ?string $role = null)
     {
         if ($request->isMethod('post')) {
             $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
-            $type = $request->input('account_type', 'patient');
             $rules = [
                 'account_type' => ['required', Rule::in(['patient'])],
                 'name' => 'required|string|max:80',
                 'email' => 'required|string|email|max:255|unique:users,email',
                 'password' => 'required|string|min:8|confirmed',
-            ];
-
-            $rules += [
                 'dob' => 'required|date',
                 'sex' => ['required', Rule::in(['Female', 'Male'])],
                 'phone' => 'required|string|max:30',
@@ -118,7 +136,8 @@ class AuthController extends Controller
 
             $request->session()->put('user', [
                 'name' => $user->name, 'email' => $user->email, 'dob' => $data['dob'],
-                'sex' => $data['sex'], 'phone' => $data['phone'], 'addr' => $data['addr'], 'photo' => $patient->avatar_path ? route('patient.avatar') : '',
+                'sex' => $data['sex'], 'phone' => $data['phone'], 'addr' => $data['addr'],
+                'photo' => $patient->avatar_path ? route('patient.avatar') : '',
             ]);
             return redirect()->route('verification.notice')->with('flash', 'Account created. Verify your email to continue.');
         }

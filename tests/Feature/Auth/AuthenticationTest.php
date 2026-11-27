@@ -16,7 +16,9 @@ class AuthenticationTest extends TestCase
         $user = User::create(['name' => 'Patient', 'email' => 'patient@example.test', 'password' => 'password123', 'role' => 'patient', 'email_verified_at' => now()]);
         Patient::create(['user_id' => $user->id, 'full_name' => 'Patient', 'date_of_birth' => '1990-01-01', 'sex' => 'Female', 'contact_number' => '09123456789', 'address' => 'Address', 'email' => $user->email]);
 
-        $this->get(route('login'))->assertOk();
+        $this->get(route('login'))->assertRedirect(route('welcome.page'));
+        $this->get(route('welcome.page'))->assertOk();
+        $this->get(route('login', 'patient'))->assertOk();
         $this->post(route('login.submit'), ['email' => $user->email, 'password' => 'password123'])
             ->assertRedirect(route('patient.dashboard'));
         $this->assertAuthenticatedAs($user);
