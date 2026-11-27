@@ -1,6 +1,6 @@
 # DentaCare for Laravel (Blade front end)
 
-> **This repository is the front end only** (Blade views, CSS, JS) plus small demo controllers so every screen works. It is not a full Laravel app: copy the files into an existing Laravel 10, 11 or 12 project. Sign-in and data are demo-only.
+> This Laravel app includes a Blade front end and demo clinic workflows. Account credentials and patient/staff roles are stored in the database; clinic appointment data remains demo session data.
 
 Copy these into a Laravel 10/11/12 project (PHP 8.2+ for Laravel 12) (merge folders, keep your own composer.json / .env):
 
@@ -14,10 +14,12 @@ Copy these into a Laravel 10/11/12 project (PHP 8.2+ for Laravel 12) (merge fold
 Run: `php artisan serve` then open http://127.0.0.1:8000
 
 Notes
-- Demo data lives in the session (no database tables needed). Laravel 11/12 default to the `database` session driver, so run `php artisan migrate` once (or set `SESSION_DRIVER=file` in `.env`).
+- Run `php artisan migrate` to create the account and patient tables.
+- Patient and clinic staff use the same sign-in page. The account role determines which dashboard opens.
+- Patient self-registration is open. Staff registration requires setting `CLINIC_STAFF_INVITE_CODE` in `.env`; share that code only with invited staff.
 - Routes contain no closures, so `php artisan route:cache` / `optimize` work.
 - `public/uploads` must be writable (profile photos).
-- Sign-in accepts any valid email and any password (demo only).
+- Appointment, queue, and reminder data is sample data stored in the session.
 - Forms use `@csrf`; validation errors show in a red box at the top of each form.
 
 ## Frontend files

@@ -11,5 +11,6 @@
 <label>Contact number</label><input name="phone" value="{{ $u['phone'] }}">
 <label>Address</label><input name="addr" placeholder="House/Unit No., Street, Barangay, City, Province" value="{{ $u['addr'] }}">
 <label>Email</label><input name="email" value="{{ $u['email'] }}"><br><br>
-<button class="btn">Save changes</button> <a class="btn o" href="{{ route('logout') }}">Log out</a></form></div>
+<button class="btn">Save changes</button></form>
+<form method="post" action="{{ route('logout') }}" style="margin-top:12px">@csrf<button class="btn o" type="submit">Log out</button></form></div>
 @endsection

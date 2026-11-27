@@ -10,12 +10,12 @@ use Illuminate\Support\Facades\Route;
 Route::middleware([BootClinic::class])->group(function () {
     Route::view('/', 'welcome')->name('welcome');
 
-    Route::controller(AuthController::class)->where(['role' => 'admin|patient'])->group(function () {
-        Route::match(['get', 'post'], '/login/{role}', 'login')->name('login');
-        Route::match(['get', 'post'], '/signup/{role}', 'signup')->name('signup');
-        Route::match(['get', 'post'], '/forgot/{role}', 'forgot')->name('forgot');
+    Route::controller(AuthController::class)->group(function () {
+        Route::match(['get', 'post'], '/login', 'login')->name('login');
+        Route::match(['get', 'post'], '/signup', 'signup')->name('signup');
+        Route::match(['get', 'post'], '/forgot', 'forgot')->name('forgot');
+        Route::post('/logout', 'logout')->name('logout');
     });
-    Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::prefix('patient')->name('patient.')->middleware([EnsureRole::class . ':patient'])->controller(PatientController::class)->group(function () {
         Route::get('dashboard', 'dashboard')->name('dashboard');
