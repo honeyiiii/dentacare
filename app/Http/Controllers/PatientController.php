@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Support\Clinic;
+use App\Models\Patient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class PatientController extends Controller
 {
@@ -49,9 +52,45 @@ class PatientController extends Controller
     {
         if ($r->isMethod('post')) {
             if ($r->has('remove')) { session(['user.photo' => '']); return redirect()->route('patient.profile')->with('flash', 'Photo removed'); }
-            $d = $r->validate(['photo' => 'nullable|mimes:jpg,jpeg,png,webp|max:2048', 'name' => 'nullable|max:80', 'email' => 'nullable|email|max:120', 'dob' => 'nullable|date', 'sex' => 'nullable|in:Female,Male', 'phone' => 'nullable|max:30', 'addr' => 'nullable|max:200']);
-            $u = session('user'); $old = $u['name'];
-            foreach (['name', 'email', 'dob', 'sex', 'phone', 'addr'] as $k) if (array_key_exists($k, $d) && ($k !== 'name' || trim((string) $d[$k]) !== '')) $u[$k] = trim((string) ($d[$k] ?? ''));
+            $user = Auth::user();
+            $patient = Patient::firstOrNew(['user_id' => $user->id]);
+            $d = $r->validate([
+                'photo' => 'nullable|mimes:jpg,jpeg,png,webp|max:2048',
+                'name' => 'nullable|string|max:80',
+                'email' => ['nullable', 'email', 'max:120', Rule::unique('users', 'email')->ignore($user->id)],
+                'dob' => 'nullable|date',
+                'sex' => ['nullable', Rule::in(['Female', 'Male'])],
+                'phone' => 'nullable|string|max:30',
+                'addr' => 'nullable|string|max:200',
+            ]);
+
+            if (! $patient->exists && (empty($d['dob']) || empty($d['sex']) || empty($d['phone']) || empty($d['addr']))) {
+                return back()->withErrors(['dob' => 'Complete your patient details before saving your profile.'])->withInput();
+            }
+
+            $u = session('user');
+            $old = $u['name'];
+            $user->update([
+                'name' => trim((string) ($d['name'] ?? '')) ?: $user->name,
+                'email' => strtolower(trim((string) ($d['email'] ?? ''))) ?: $user->email,
+            ]);
+            $patient->fill([
+                'full_name' => $user->name,
+                'date_of_birth' => $d['dob'] ?? $patient->date_of_birth,
+                'sex' => $d['sex'] ?? $patient->sex,
+                'contact_number' => $d['phone'] ?? $patient->contact_number,
+                'address' => $d['addr'] ?? $patient->address,
+                'email' => $user->email,
+            ])->save();
+
+            $u = array_merge($u, [
+                'name' => $user->name,
+                'email' => $user->email,
+                'dob' => $patient->date_of_birth->format('Y-m-d'),
+                'sex' => $patient->sex,
+                'phone' => $patient->contact_number,
+                'addr' => $patient->address,
+            ]);
             if ($p = Clinic::photo($r->file('photo'), 'patient')) $u['photo'] = $p;
             $appts = array_map(fn($a) => $a['pat'] === $old ? array_merge($a, ['pat' => $u['name']]) : $a, session('appts'));
             session(['user' => $u, 'appts' => $appts]);

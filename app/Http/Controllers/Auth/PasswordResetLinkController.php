@@ -14,9 +14,9 @@ class PasswordResetLinkController extends Controller
     /**
      * Display the password reset link request view.
      */
-    public function create(): View
+    public function create(?string $role = null): View
     {
-        return view('auth.forgot-password');
+        return view('auth.forgot');
     }
 
     /**
@@ -24,8 +24,9 @@ class PasswordResetLinkController extends Controller
      *
      * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, ?string $role = null): RedirectResponse
     {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
         $request->validate([
             'email' => ['required', 'email'],
         ]);
@@ -37,9 +38,11 @@ class PasswordResetLinkController extends Controller
             $request->only('email')
         );
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        if ($status === Password::RESET_THROTTLED) {
+            return back()->withInput($request->only('email'))
+                ->withErrors(['email' => 'Please wait before requesting another reset link.']);
+        }
+
+        return back()->with('status', 'If an account exists for that email, a password reset link has been sent.');
     }
 }

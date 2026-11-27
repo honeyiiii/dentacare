@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
@@ -136,43 +135,6 @@ class AuthController extends Controller
         }
 
         return view('auth.signup');
-    }
-
-    public function forgot(Request $request, ?string $role = null)
-    {
-        $step = 1;
-        $email = $request->session()->get('reset_email');
-
-        if ($request->isMethod('post')) {
-            if ($request->input('step') === '1') {
-                $data = $request->validate(['email' => 'required|email']);
-                $email = strtolower($data['email']);
-                if (! User::where('email', $email)->exists()) {
-                    return back()->withErrors(['email' => 'No account was found for that email address.'])->withInput();
-                }
-                $request->session()->put('reset_email', $email);
-                $step = 2;
-            } else {
-                $validator = Validator::make($request->all(), [
-                    'code' => ['required', 'regex:/^\d{6}$/'],
-                    'password' => 'required|min:8|confirmed',
-                ]);
-                if ($validator->fails()) {
-                    return view('auth.forgot', compact('step', 'email'))->withErrors($validator);
-                }
-
-                $user = User::where('email', $request->session()->get('reset_email'))->first();
-                if (! $user) {
-                    return redirect()->route('forgot')->withErrors(['email' => 'Please start the password reset again.']);
-                }
-
-                $user->update(['password' => Hash::make($request->input('password'))]);
-                $request->session()->forget('reset_email');
-                return redirect()->route('login')->with('flash', 'Password updated. Please sign in.');
-            }
-        }
-
-        return view('auth.forgot', compact('step', 'email'));
     }
 
     public function logout(Request $request)

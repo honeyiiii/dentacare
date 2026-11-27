@@ -17,6 +17,7 @@ Notes
 - Run `php artisan migrate` to create the account and patient tables.
 - Patient and clinic staff use the same sign-in page. The account role determines which dashboard opens.
 - Patient self-registration is open. Staff registration requires setting `CLINIC_STAFF_INVITE_CODE` in `.env`; share that code only with invited staff.
+- Password resets use Laravel's expiring, single-use reset links. The sample mailer is `log`, so local reset emails are written to `storage/logs/laravel.log`; configure SMTP in `.env` to deliver them to inboxes.
 - Routes contain no closures, so `php artisan route:cache` / `optimize` work.
 - `public/uploads` must be writable (profile photos).
 - Appointment, queue, and reminder data is sample data stored in the session.

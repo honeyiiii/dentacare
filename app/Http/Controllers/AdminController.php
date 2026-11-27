@@ -3,10 +3,29 @@
 namespace App\Http\Controllers;
 
 use App\Support\Clinic;
+use App\Models\Patient;
 use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
+    public function patients(Request $r)
+    {
+        $search = trim((string) $r->query('search', ''));
+        $patients = Patient::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('full_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('contact_number', 'like', "%{$search}%");
+                });
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('admin.patients', compact('patients', 'search'));
+    }
+
     public function dashboard()
     {
         $bk = array_values(array_filter(session('appts'), fn($a) => $a['st'] === 'Booked'));

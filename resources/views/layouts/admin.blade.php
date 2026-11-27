@@ -1,7 +1,7 @@
 @extends('layouts.base')
 @section('body')
 <div class="app"><aside><h1>DENTACARE</h1>
-@foreach (['dashboard' => 'Dashboard', 'calendar' => 'Calendar', 'queue' => 'Patient Queue', 'reminders' => 'Reminders', 'reports' => 'Reports', 'profile' => 'Profile', 'privacy' => 'Privacy Notice'] as $k => $l)
+@foreach (['dashboard' => 'Dashboard', 'patients' => 'Patients', 'calendar' => 'Calendar', 'queue' => 'Patient Queue', 'reminders' => 'Reminders', 'reports' => 'Reports', 'profile' => 'Profile', 'privacy' => 'Privacy Notice'] as $k => $l)
 <a href="{{ route('admin.' . $k) }}" class="{{ request()->routeIs('admin.' . $k) ? 'on' : '' }}">{{ $l }}</a>
 @endforeach
 <form method="post" action="{{ route('logout') }}">@csrf<button type="submit" class="btn o" style="width:100%;margin:8px 0">Log out</button></form>
