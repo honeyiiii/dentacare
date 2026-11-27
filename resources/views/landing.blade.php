@@ -147,7 +147,7 @@ footer a:hover{color:#fff;text-decoration:underline}
     <h2>Questions patients ask</h2>
     <p class="sub">Quick answers before you book.</p>
     <details open><summary>How do I book an appointment?</summary><p>Sign in, choose a service, dentist, date and time, then confirm.</p></details>
-    <details><summary>Can I reschedule or cancel a visit?</summary><p>Yes. Open Appointments and choose Reschedule or Cancel on an upcoming visit.</p></details>
+    <details><summary>Can I reschedule or cancel a visit?</summary><p>You can reschedule an upcoming visit from Appointments. Contact the clinic to request a cancellation.</p></details>
     <details><summary>Is the symptom checker a diagnosis?</summary><p>No. It gives a predicted result only. Your dentist makes the diagnosis.</p></details>
     <details><summary>Do you accept walk-ins?</summary><p>Yes. Front desk adds walk-ins to the queue and sees them in order.</p></details>
     <details><summary>Will I get reminders?</summary><p>We send appointment and recall notices by SMS or email.</p></details>

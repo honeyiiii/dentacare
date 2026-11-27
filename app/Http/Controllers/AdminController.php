@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Auth\Events\Registered;
 
 class AdminController extends Controller
 {
@@ -40,22 +41,42 @@ class AdminController extends Controller
 
     public function staff()
     {
-        abort_unless(Auth::user()->staff_title === 'Front desk', 403);
+        abort_unless($this->isFrontDeskManager(), 403);
         return view('admin.staff', ['staff' => User::where('role', 'admin')->orderBy('name')->get()]);
+    }
+
+    public function updateStaffStatus(Request $r, int $id)
+    {
+        abort_unless($this->isFrontDeskManager(), 403);
+        $data = $r->validate(['is_active' => ['required', 'boolean']]);
+        $staff = User::where('role', 'admin')->findOrFail($id);
+        $activate = (bool) $data['is_active'];
+        if (! $activate && (int) $staff->id === (int) Auth::id()) {
+            return back()->withErrors(['staff' => 'You cannot deactivate your own account.']);
+        }
+        if (! $activate && in_array($staff->staff_title, ['Owner', 'Front desk'], true)
+            && User::where('role', 'admin')->whereIn('staff_title', ['Owner', 'Front desk'])->where('is_active', true)->count() <= 1) {
+            return back()->withErrors(['staff' => 'At least one active owner or receptionist account must remain.']);
+        }
+
+        $staff->update(['is_active' => $activate]);
+        $this->audit($activate ? 'staff.activated' : 'staff.deactivated', 'User', $staff->id);
+        return back()->with('flash', $activate ? 'Staff account activated.' : 'Staff account deactivated.');
     }
 
     public function createStaff(Request $r)
     {
-        abort_unless(Auth::user()->staff_title === 'Front desk', 403);
+        abort_unless($this->isFrontDeskManager(), 403);
         $data = $r->validate([
             'name' => 'required|string|max:80',
             'email' => 'required|email|max:255|unique:users,email',
-            'staff_title' => 'required|in:Front desk,Dentist',
+            'staff_title' => 'required|in:Front desk,Assistant,Dentist',
         ]);
         $user = User::create([
             'name' => $data['name'], 'email' => strtolower(trim($data['email'])),
-            'password' => Str::random(64), 'role' => 'admin', 'staff_title' => $data['staff_title'],
+            'password' => Str::random(64), 'role' => 'admin', 'staff_title' => $data['staff_title'], 'is_active' => true,
         ]);
+        event(new Registered($user));
         $status = Password::sendResetLink(['email' => $user->email]);
         $this->audit('staff.created', 'User', $user->id);
         $message = $status !== Password::RESET_LINK_SENT
@@ -136,6 +157,7 @@ class AdminController extends Controller
             if ($appointment->status !== 'Booked') return back()->withErrors(['appointment' => 'Only booked appointments can be changed.']);
 
             if ($data['act'] === 'cancel') {
+                abort_unless(in_array(Auth::user()->staff_title, ['Owner', 'Front desk', 'Dentist'], true), 403);
                 if (QueueEntry::where('appointment_id', $appointment->id)->whereIn('status', ['Waiting', 'In chair'])->exists()) {
                     return back()->withErrors(['appointment' => 'Remove this patient from the active queue before cancelling the appointment.']);
                 }
@@ -328,7 +350,7 @@ class AdminController extends Controller
         $request = PrivacyRequest::with('patient')->findOrFail($id);
         if (Auth::user()->staff_title === 'Dentist' && $request->patient->assigned_dentist_id !== Auth::id()) abort(403);
         if ($request->request_type === 'Deletion' && $data['status'] === 'Completed') {
-            abort_unless(Auth::user()->staff_title === 'Front desk', 403);
+            abort_unless($this->isFrontDeskManager(), 403);
             DB::transaction(function () use ($request) {
                 $patient = $request->patient;
                 if (! $patient->trashed()) {
@@ -372,10 +394,12 @@ class AdminController extends Controller
                 'phone' => 'nullable|string|max:30',
                 'email' => ['nullable', 'email', 'max:120', Rule::unique('users', 'email')->ignore($user->id)],
             ]);
+            $emailChanged = strtolower(trim((string) ($data['email'] ?? $user->email))) !== strtolower($user->email);
             $user->update([
                 'name' => trim((string) ($data['name'] ?? '')) ?: $user->name,
                 'email' => strtolower(trim((string) ($data['email'] ?? ''))) ?: $user->email,
                 'phone' => $data['phone'] ?? $user->phone,
+                'email_verified_at' => $emailChanged ? null : $user->email_verified_at,
             ]);
             if ($r->hasFile('photo')) {
                 if ($user->avatar_path) Storage::disk('local')->delete($user->avatar_path);
@@ -383,6 +407,10 @@ class AdminController extends Controller
             }
             $this->audit('staff.profile_updated', 'User', $user->id);
             session(['admin' => ['name' => $user->name, 'role' => $user->staff_title, 'email' => $user->email, 'phone' => $user->phone, 'photo' => $user->avatar_path ? route('admin.avatar') : '']]);
+            if ($emailChanged) {
+                $user->sendEmailVerificationNotification();
+                return redirect()->route('verification.notice')->with('flash', 'Profile saved. Verify your new email address to continue.');
+            }
             return redirect()->route('admin.profile')->with('flash', 'Profile saved');
         }
         return view('admin.profile', ['u' => ['name' => $user->name, 'role' => $user->staff_title, 'email' => $user->email, 'phone' => $user->phone, 'photo' => $user->avatar_path ? route('admin.avatar') : '']]);
@@ -428,5 +456,10 @@ class AdminController extends Controller
     private function audit(string $action, ?string $type = null, ?int $id = null): void
     {
         AuditLog::create(['actor_id' => Auth::id(), 'action' => $action, 'subject_type' => $type, 'subject_id' => $id]);
+    }
+
+    private function isFrontDeskManager(): bool
+    {
+        return in_array(Auth::user()->staff_title, ['Owner', 'Front desk'], true);
     }
 }

@@ -16,16 +16,17 @@ Open `http://127.0.0.1:8000`.
 
 The seeder creates demo users with password `password123`:
 
-- Staff: `owner@dentacare.test` (Front desk)
+- Staff: `owner@dentacare.test` (Owner)
 - Dentist: `dentist@dentacare.test`
 - Patient: `patient@dentacare.test`
 
-Public sign-up creates patient accounts only. An authorized front-desk staff member provisions staff accounts from **Staff**, and the new staff member sets their password using the reset link.
+Public sign-up creates patient accounts only. New patient and staff accounts must verify their email before opening protected pages. An authorized owner or receptionist provisions staff accounts from **Staff**, and the new staff member sets their password using the reset link. Staff accounts can be activated or deactivated from **Staff**; deactivated accounts cannot sign in or continue using protected sessions.
 
 ## Application behavior
 
 - Appointments, queue entries, reminders, symptom checks, and privacy requests are persisted in the database.
 - Patient routes use the authenticated patient's own record. Dentist views are limited to assigned patients/appointments; front-desk staff can access clinic-wide workflows.
+- Patients can reschedule their own appointments but must contact the clinic to request cancellation. Owners, receptionists, and the appointment's assigned dentist can cancel; assistants cannot.
 - Booking slots use a unique dentist/date/time key to prevent double booking. Appointments can be cancelled only while booked and future; completion occurs through the queue.
 - Symptom checks are validated and stored as JSON arrays. Results are predictions, not diagnoses.
 - Avatar uploads accept JPG/PNG up to 2 MB and are stored on Laravel's private local disk. Authorized routes serve the images.
@@ -35,7 +36,7 @@ Public sign-up creates patient accounts only. An authorized front-desk staff mem
 
 ## Email and production configuration
 
-The default local mailer is `log`; password-reset emails are written to `storage/logs/laravel.log`, and appointment reminders are marked **Logged only**. They are not delivered. Configure a real mail transport in `.env` (`MAIL_MAILER=smtp`, host, port, username, password, and sender) before relying on delivery. SMS reminders are not integrated.
+The default local mailer is `log`; password-reset and verification emails are written to `storage/logs/laravel.log`, and appointment reminders are marked **Logged only**. They are not delivered. Configure a real mail transport in `.env` (`MAIL_MAILER=smtp`, host, port, username, password, and sender) before relying on delivery. SMS reminders are not integrated.
 
 For production, set `APP_ENV=production`, `APP_DEBUG=false`, use an HTTPS `APP_URL`, configure a real mail provider and trusted HTTPS proxy settings as needed, and set `SESSION_SECURE_COOKIE=true`. Keep credentials and application secrets in environment configuration, not source control. Back up the database and private storage securely.
 

@@ -33,15 +33,7 @@ class PatientController extends Controller
     {
         $patient = Patient::where('user_id', Auth::id())->firstOrFail();
         if ($r->isMethod('post')) {
-            $data = $r->validate(['id' => 'required|integer']);
-            $appointment = $patient->appointments()->whereKey($data['id'])->firstOrFail();
-            if ($appointment->status !== 'Booked' || Carbon::parse($appointment->appointment_date->toDateString() . ' ' . $appointment->appointment_time)->isPast()) {
-                return back()->withErrors(['appointment' => 'Only future booked appointments can be cancelled.']);
-            }
-            $appointment->update(['status' => 'Cancelled', 'slot_key' => null]);
-            Reminder::where('appointment_id', $appointment->id)->whereIn('status', ['pending', 'failed', 'logged'])->update(['status' => 'cancelled']);
-            AuditLog::create(['actor_id' => Auth::id(), 'action' => 'appointment.cancelled', 'subject_type' => 'Appointment', 'subject_id' => $appointment->id]);
-            return redirect()->route('patient.appointments')->with('flash', 'Appointment cancelled');
+            abort(403, 'Please contact the clinic to cancel an appointment.');
         }
         foreach ($patient->appointments()->pluck('id') as $appointmentId) {
             AuditLog::create(['actor_id' => Auth::id(), 'action' => 'patient.appointment_viewed', 'subject_type' => 'Appointment', 'subject_id' => $appointmentId]);
@@ -197,9 +189,11 @@ class PatientController extends Controller
             }
 
             $u = session('user');
+            $emailChanged = strtolower(trim((string) ($d['email'] ?? $user->email))) !== strtolower($user->email);
             $user->update([
                 'name' => trim((string) ($d['name'] ?? '')) ?: $user->name,
                 'email' => strtolower(trim((string) ($d['email'] ?? ''))) ?: $user->email,
+                'email_verified_at' => $emailChanged ? null : $user->email_verified_at,
             ]);
             $patient->fill([
                 'full_name' => $user->name,
@@ -225,6 +219,10 @@ class PatientController extends Controller
             }
             session(['user' => $u]);
             AuditLog::create(['actor_id' => Auth::id(), 'action' => 'patient.profile_updated', 'subject_type' => 'Patient', 'subject_id' => $patient->id]);
+            if ($emailChanged) {
+                $user->sendEmailVerificationNotification();
+                return redirect()->route('verification.notice')->with('flash', 'Profile saved. Verify your new email address to continue.');
+            }
             return redirect()->route('patient.profile')->with('flash', 'Profile saved');
         }
         AuditLog::create(['actor_id' => Auth::id(), 'action' => 'patient.profile_viewed', 'subject_type' => 'Patient', 'subject_id' => $patient->id]);

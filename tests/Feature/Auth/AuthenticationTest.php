@@ -13,7 +13,7 @@ class AuthenticationTest extends TestCase
 
     public function test_login_page_renders_and_patient_login_opens_patient_dashboard(): void
     {
-        $user = User::create(['name' => 'Patient', 'email' => 'patient@example.test', 'password' => 'password123', 'role' => 'patient']);
+        $user = User::create(['name' => 'Patient', 'email' => 'patient@example.test', 'password' => 'password123', 'role' => 'patient', 'email_verified_at' => now()]);
         Patient::create(['user_id' => $user->id, 'full_name' => 'Patient', 'date_of_birth' => '1990-01-01', 'sex' => 'Female', 'contact_number' => '09123456789', 'address' => 'Address', 'email' => $user->email]);
 
         $this->get(route('login'))->assertOk();
@@ -28,6 +28,34 @@ class AuthenticationTest extends TestCase
 
         $this->post(route('login.submit'), ['email' => 'patient@example.test', 'password' => 'wrong-password'])
             ->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    public function test_unverified_login_is_sent_to_verification_notice(): void
+    {
+        User::create(['name' => 'Patient', 'email' => 'unverified@example.test', 'password' => 'password123', 'role' => 'patient']);
+
+        $this->post(route('login.submit'), ['email' => 'unverified@example.test', 'password' => 'password123'])
+            ->assertRedirect(route('verification.notice'));
+        $this->assertAuthenticated();
+        $this->get(route('patient.dashboard'))->assertRedirect(route('verification.notice'));
+    }
+
+    public function test_deactivated_user_cannot_sign_in(): void
+    {
+        User::create(['name' => 'Patient', 'email' => 'disabled@example.test', 'password' => 'password123', 'role' => 'patient', 'email_verified_at' => now(), 'is_active' => false]);
+
+        $this->post(route('login.submit'), ['email' => 'disabled@example.test', 'password' => 'password123'])
+            ->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    public function test_deactivated_user_is_logged_out_of_an_existing_session(): void
+    {
+        $user = User::create(['name' => 'Patient', 'email' => 'disabled@example.test', 'password' => 'password123', 'role' => 'patient', 'email_verified_at' => now(), 'is_active' => false]);
+        $this->actingAs($user)->withSession(['role' => 'patient'])
+            ->get(route('patient.dashboard'))
+            ->assertRedirect(route('login'));
         $this->assertGuest();
     }
 

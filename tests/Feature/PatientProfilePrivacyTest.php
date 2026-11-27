@@ -25,11 +25,11 @@ class PatientProfilePrivacyTest extends TestCase
         ]])->get(route('patient.profile'))->assertOk();
 
         $this->post(route('patient.profile'), [
-            'name' => 'Updated Patient', 'email' => 'updated@example.test', 'dob' => '1991-02-03',
+            'name' => 'Updated Patient', 'email' => 'patient@example.test', 'dob' => '1991-02-03',
             'sex' => 'Male', 'phone' => '09987654321', 'addr' => 'New address',
         ])->assertRedirect(route('patient.profile'));
 
-        $this->assertDatabaseHas('users', ['id' => $user->id, 'name' => 'Updated Patient', 'email' => 'updated@example.test']);
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'name' => 'Updated Patient', 'email' => 'patient@example.test']);
         $this->assertDatabaseHas('patients', ['id' => $patient->id, 'full_name' => 'Updated Patient', 'contact_number' => '09987654321', 'address' => 'New address']);
     }
 
@@ -46,7 +46,7 @@ class PatientProfilePrivacyTest extends TestCase
     public function test_front_desk_processing_a_deletion_request_removes_direct_identifiers(): void
     {
         [$patientUser, $patient] = $this->makePatient();
-        $dentist = User::create(['name' => 'Dentist', 'email' => 'dentist@example.test', 'password' => 'password123', 'role' => 'admin', 'staff_title' => 'Dentist']);
+        $dentist = User::create(['name' => 'Dentist', 'email' => 'dentist@example.test', 'password' => 'password123', 'role' => 'admin', 'staff_title' => 'Dentist', 'email_verified_at' => now()]);
         $appointment = Appointment::create([
             'patient_id' => $patient->id, 'dentist_id' => $dentist->id, 'service' => 'Consultation',
             'appointment_date' => now()->addDays(5)->toDateString(), 'appointment_time' => '10:00',
@@ -56,7 +56,7 @@ class PatientProfilePrivacyTest extends TestCase
         $queue = QueueEntry::create(['patient_id' => $patient->id, 'appointment_id' => $appointment->id, 'patient_name' => $patient->full_name, 'service' => 'Consultation', 'queue_date' => today(), 'position' => 1, 'status' => 'Waiting']);
         $patient->symptomChecks()->create(['symptoms' => ['Toothache'], 'conditions' => ['predictions' => []], 'pain_level' => 5, 'duration' => '1 to 3 days', 'urgency' => 'Low']);
         $request = PrivacyRequest::create(['patient_id' => $patient->id, 'request_type' => 'Deletion', 'status' => 'Open']);
-        $frontDesk = User::create(['name' => 'Receptionist', 'email' => 'desk@example.test', 'password' => 'password123', 'role' => 'admin', 'staff_title' => 'Front desk']);
+        $frontDesk = User::create(['name' => 'Receptionist', 'email' => 'desk@example.test', 'password' => 'password123', 'role' => 'admin', 'staff_title' => 'Front desk', 'email_verified_at' => now()]);
 
         $this->actingAs($frontDesk)->withSession(['role' => 'admin', 'admin' => ['role' => 'Front desk']])
             ->post(route('admin.privacy-requests.update', $request->id), ['status' => 'Completed'])
@@ -75,7 +75,7 @@ class PatientProfilePrivacyTest extends TestCase
 
     public function test_staff_cannot_change_their_own_role_in_profile(): void
     {
-        $staff = User::create(['name' => 'Receptionist', 'email' => 'staff@example.test', 'password' => 'password123', 'role' => 'admin', 'staff_title' => 'Front desk']);
+        $staff = User::create(['name' => 'Receptionist', 'email' => 'staff@example.test', 'password' => 'password123', 'role' => 'admin', 'staff_title' => 'Front desk', 'email_verified_at' => now()]);
         $this->actingAs($staff)->withSession(['role' => 'admin', 'admin' => ['role' => 'Front desk']])
             ->post(route('admin.profile'), ['role' => 'Dentist', 'name' => 'Receptionist'])
             ->assertRedirect(route('admin.profile'));
@@ -83,9 +83,24 @@ class PatientProfilePrivacyTest extends TestCase
         $this->assertSame('Front desk', $staff->fresh()->staff_title);
     }
 
+    public function test_patient_email_change_requires_reverification(): void
+    {
+        [$user, $patient] = $this->makePatient();
+        $this->actingAs($user)->withSession(['role' => 'patient', 'user' => [
+            'name' => $user->name, 'email' => $user->email, 'dob' => '1990-01-01', 'sex' => 'Female',
+            'phone' => '09123456789', 'addr' => 'Address', 'photo' => '',
+        ]])->post(route('patient.profile'), [
+            'name' => $user->name, 'email' => 'changed@example.test', 'dob' => '1990-01-01',
+            'sex' => 'Female', 'phone' => '09123456789', 'addr' => 'Address',
+        ])->assertRedirect(route('verification.notice'));
+
+        $this->assertNull($user->fresh()->email_verified_at);
+        $this->assertSame('changed@example.test', $patient->fresh()->email);
+    }
+
     private function makePatient(): array
     {
-        $user = User::create(['name' => 'Patient', 'email' => 'patient@example.test', 'password' => 'password123', 'role' => 'patient']);
+        $user = User::create(['name' => 'Patient', 'email' => 'patient@example.test', 'password' => 'password123', 'role' => 'patient', 'email_verified_at' => now()]);
         $patient = Patient::create([
             'user_id' => $user->id, 'full_name' => $user->name, 'date_of_birth' => '1990-01-01',
             'sex' => 'Female', 'contact_number' => '09123456789', 'address' => 'Address', 'email' => $user->email,

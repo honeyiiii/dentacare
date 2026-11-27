@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Patient;
 use App\Models\AuditLog;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,9 @@ class AuthController extends Controller
                 'password' => 'required|string',
             ]);
 
-            if (! Auth::attempt($credentials)) {
+            $account = User::where('email', $credentials['email'])->first();
+            if (! Auth::attempt($credentials) || ! $account?->is_active) {
+                Auth::logout();
                 return back()->withErrors(['email' => 'These credentials do not match our records.'])->onlyInput('email');
             }
 
@@ -35,6 +38,8 @@ class AuthController extends Controller
             }
 
             $request->session()->put('role', $user->role);
+
+            if (! $user->hasVerifiedEmail()) return redirect()->route('verification.notice');
 
             if ($user->role === 'patient') {
                 $patient = Patient::where('user_id', $user->id)->first();
@@ -106,6 +111,7 @@ class AuthController extends Controller
                 return [$user, $patient];
             });
 
+            event(new Registered($user));
             Auth::login($user);
             $request->session()->regenerate();
             $request->session()->put('role', $user->role);
@@ -114,7 +120,7 @@ class AuthController extends Controller
                 'name' => $user->name, 'email' => $user->email, 'dob' => $data['dob'],
                 'sex' => $data['sex'], 'phone' => $data['phone'], 'addr' => $data['addr'], 'photo' => $patient->avatar_path ? route('patient.avatar') : '',
             ]);
-            return redirect()->route('patient.dashboard')->with('flash', 'Account created');
+            return redirect()->route('verification.notice')->with('flash', 'Account created. Verify your email to continue.');
         }
 
         return view('auth.signup');
